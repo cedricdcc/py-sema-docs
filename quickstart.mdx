@@ -1,47 +1,140 @@
 ---
 title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+description: "Install py-sema and run your first semantic command line pipeline"
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+This guide gets you up and running with `py-sema` from installation to executing key CLI tools and building automated workflows.
 
 ## Prerequisites
 
-Before you begin, you must have:
+Before installing `py-sema`, verify that your environment meets the following requirements:
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
+- **Python**: Python `>= 3.11` and `< 4.0`
+- **Package Manager**: [Poetry](https://python-poetry.org/) (recommended) or `pip`
 
-## Get started
+## Installation
+
+Install `py-sema` via Poetry or pip:
+
+<CodeGroup>
+```bash Poetry
+poetry add pysema
+```
+
+```bash pip
+pip install pysema
+```
+
+```bash From Source
+git clone https://github.com/vliz-be-opsci/py-sema.git
+cd py-sema
+poetry install
+```
+</CodeGroup>
+
+## Getting Started with CLI Tools
+
+Once installed, `py-sema` registers CLI commands in your environment. Let's try common operations.
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Discover Linked Data with sema-get">
+    Resolve a subject URI, negotiate RDF MIME types, and output Turtle directly:
 
     ```bash
-    npm install your-package
+    sema-get https://data.emobon.embrc.eu/ -f turtle -o output.ttl
+    ```
+
+    You can also stream output directly to stdout with `-o -`:
+
+    ```bash
+    sema-get https://data.emobon.embrc.eu/ -f turtle -o -
     ```
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+
+  <Step title="Transform Tabular Data to RDF with sema-subyt">
+    Generate RDF triples from a CSV file using a Jinja2 Turtle template:
+
+    Create a template file named `person.ttl`:
+
+    ```jinja2
+    @prefix schema: <https://schema.org/> .
+    @prefix ex: <https://example.org/person/> .
+
+    ex:{{ id }} a schema:Person ;
+        schema:name "{{ name }}" ;
+        schema:email "{{ email }}" .
+    ```
+
+    With an input file `people.csv`:
+
+    ```csv
+    id,name,email
+    1,Alice,alice@example.org
+    2,Bob,bob@example.org
+    ```
+
+    Run `sema-subyt`:
 
     ```bash
-    your-cli init
+    sema-subyt --templates . --name person.ttl --input people.csv --output output-people.ttl
     ```
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+
+  <Step title="Query Knowledge Graphs with sema-query">
+    Query RDF files or SPARQL endpoints and output tabular CSV results:
 
     ```bash
-    your-cli start
+    sema-query -s output-people.ttl -t all.sparql -o results.csv -f csv
+    ```
+
+    <Tip>
+      Run `sema-query-templates` to install pre-built SPARQL templates for common vocabulary queries, SKOS concepts, and RDF predicate counters.
+    </Tip>
+  </Step>
+
+  <Step title="Orchestrate Pipelines with sema-bench">
+    To run multi-step workflows periodically or when files change, create a `sembench.yaml` file:
+
+    ```yaml
+    tasks:
+      generate_rdf:
+        func: subyt
+        args:
+          template_folder: ./templates
+          template_name: person.ttl
+          source: people.csv
+          sink: people.ttl
+
+      validate_shapes:
+        func: shacl
+        args:
+          data_graph: people.ttl
+          shacl_graph: shapes.ttl
+    ```
+
+    Run the pipeline with:
+
+    ```bash
+    sema-bench -c . -n sembench.yaml
     ```
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Next Steps
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+Explore the individual command references for detailed configurations and advanced options:
+
+<CardGroup cols={2}>
+  <Card title="sema-bench Reference" icon="gears" href="/cli/bench">
+    Configure task schedules, directory roles, and failure handling.
+  </Card>
+  <Card title="sema-harvest Reference" icon="network-wired" href="/cli/harvest">
+    Define property trajectories and crawl semantic knowledge graphs.
+  </Card>
+  <Card title="sema-subyt Reference" icon="file-code" href="/cli/subyt">
+    Master Jinja2 macros, multi-source joins, and unique row filtering.
+  </Card>
+  <Card title="Python API Overview" icon="python" href="/python-api/overview">
+    Integrate `py-sema` services directly into your Python code.
+  </Card>
+</CardGroup>

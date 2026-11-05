@@ -1,0 +1,98 @@
+---
+title: "sema-bench"
+description: "Pipeline orchestration and scheduling for py-sema services"
+---
+
+`sema-bench` (formerly `sembench`) is the workflow orchestrator of `py-sema`. It executes task sequences defined in YAML configurations, supports filesystem location routing, provides optional continuous file-watching, and schedules periodic runs using APScheduler.
+
+## Syntax
+
+```bash
+sema-bench -c <config-path> [options]
+```
+
+## Options
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-c`, `--config-path` | `PATH` | **Required**. Path to the parent folder containing the configuration file. |
+| `-n`, `--config-name` | `FILENAME` | Configuration file name (default: `sembench.yaml`). |
+| `-loc`, `--locations` | `KEY PATH` | Named filesystem locations (e.g. `home`, `input`, `output`). Can be repeated. |
+| `--interval` | `SECONDS` | Interval in seconds for recurring schedule execution (default: `1000`). |
+| `-w`, `--watch` | - | Watch the configuration file and re-run on changes. |
+| `-ff`, `--fail-fast` | - | Fail immediately if any service execution raises an exception. |
+| `-l`, `--logconf` | `FILE` | Path to a custom YAML logging configuration. |
+
+## Supported Task Handlers
+
+Tasks in `sembench.yaml` declare a `func` specifying which handler to run, and `args` passed directly to the corresponding service:
+
+| Handler (`func`) | Target Service | Purpose |
+| :--- | :--- | :--- |
+| `harvest` | `sema.harvest.Harvest` | Traverse and assert RDF graph trajectories |
+| `subyt` | `sema.subyt.Subyt` | Generate RDF from CSV, JSON, or XML templates |
+| `syncfs` | `sema.syncfs.SyncFsTriples` | Synchronize filesystem RDF files into a triplestore |
+| `shacl` | `pyshacl.validate` | Validate an RDF data graph against SHACL shapes |
+| `reason` | `sema.commons.reason.Reasoner` | Execute SPARQL CONSTRUCT reasoning queries |
+| `aggregate` | `sema.commons.aggregator.Aggregator` | Merge multiple RDF files into one graph |
+| `ro-get` | `sema.ro.getter.ROGetter` | Fetch and extract a remote RO-Crate |
+
+## Configuration Example
+
+Here is an example `sembench.yaml` executing a sequence:
+
+```yaml
+tasks:
+  # 1. Transform raw CSV data into RDF Turtle
+  transform_raw_data:
+    func: subyt
+    args:
+      template_folder: ./templates
+      template_name: dataset.ttl
+      source: data/input.csv
+      sink: output/data.ttl
+      overwrite_sink: true
+
+  # 2. Apply SPARQL CONSTRUCT reasoning rules
+  infer_additional_triples:
+    func: reason
+    args:
+      sources:
+        - output/data.ttl
+      queries:
+        - rules/enrichment.sparql
+      output_path: output/reasoned.ttl
+      output_format: text/turtle
+
+  # 3. Validate against SHACL shape definitions
+  validate_quality:
+    func: shacl
+    args:
+      data_graph: output/reasoned.ttl
+      shacl_graph: shapes/dataset_shape.ttl
+
+  # 4. Synchronize output to a SPARQL endpoint
+  sync_to_endpoint:
+    func: syncfs
+    args:
+      root: output/
+      base: "urn:my-project:graph:"
+      store:
+        - "http://localhost:8890/sparql"
+        - "http://localhost:8890/sparql-auth"
+```
+
+## Running the Pipeline
+
+Execute once:
+
+```bash
+sema-bench -c ./config -n sembench.yaml -ff
+```
+
+Run continuously with file watching and 5-minute interval:
+
+```bash
+sema-bench -c ./config -n sembench.yaml --interval 300 -w
+```
+

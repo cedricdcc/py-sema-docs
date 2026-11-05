@@ -1,0 +1,94 @@
+---
+title: "sema-subyt"
+description: "Data transformation and RDF triple generation using Jinja2 templates"
+---
+
+`sema-subyt` (formerly `pysubyt`) transforms tabular and structured data sources (CSV, JSON, XML) into RDF triples by evaluating Jinja2 templates. It supports iterative row-by-row rendering, bulk dataset rendering, URI templates, custom filters, and multi-source joins.
+
+## Syntax
+
+```bash
+sema-subyt -n <template-name> [options]
+```
+
+## Options
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-n`, `--name` | `NAME` | **Required**. Name of the template file in the template folder. |
+| `-t`, `--templates` | `FOLDER` | Folder holding templates (default: `.`). |
+| `-i`, `--input` | `FILE` | Primary input file to iterate over (shorthand for `-s _ FILE`). |
+| `-s`, `--set` | `KEY FILE` | Attach secondary input sources under `sets["KEY"]`. Can be repeated. |
+| `-v`, `--var` | `NAME VALUE` | Pass variable key-value pairs to the template. Can be repeated. |
+| `-o`, `--output` | `FILE\|PATTERN` | Output file destination or `{uritemplate}` pattern. Use `-` for stdout. |
+| `-f`, `--force` | - | Overwrite output files without prompting. |
+| `-u`, `--unique` | `PATTERN` | Deduplication filter: processes only the first record where pattern evaluates to a unique value. |
+| `-m`, `--mode` | `MODE` | Iteration mode: `it` (default, per row) or `no-it` (entire dataset at once). |
+| `-r`, `--allow-repeated-sink-paths` | - | Allow repeated sink paths for duplicate data items. |
+| `-c`, `--conditional` | - | Execute only when input has been modified since last run. |
+
+## Basic Example
+
+Given a CSV file `samples.csv`:
+
+```csv
+sample_id,station,temp,date
+S001,Station-Alpha,14.5,2026-05-01
+S002,Station-Beta,16.2,2026-05-02
+```
+
+And a template `templates/sample.ttl`:
+
+```jinja2
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <https://example.org/samples/> .
+
+ex:{{ sample_id }} a sosa:Observation ;
+    sosa:hasFeatureOfInterest <https://example.org/station/{{ station }}> ;
+    sosa:hasSimpleResult "{{ temp }}"^^xsd:float ;
+    sosa:resultTime "{{ date }}"^^xsd:date .
+```
+
+Generate a single consolidated Turtle file:
+
+```bash
+sema-subyt -t ./templates -n sample.ttl -i samples.csv -o output.ttl
+```
+
+Or write each observation to an individual file using a URI pattern:
+
+```bash
+sema-subyt -t ./templates -n sample.ttl -i samples.csv -o "out/{sample_id}.ttl" -f
+```
+
+## Multi-Source Join (`--set`)
+
+When you need to look up data across multiple files, pass secondary sets:
+
+```bash
+sema-subyt -t ./templates -n enriched.ttl \
+  -i samples.csv \
+  -s stations stations.json \
+  -v PROJECT_ID marine-obs-2026 \
+  -o output.ttl
+```
+
+In your template, access secondary datasets through `sets`:
+
+```jinja2
+{% set st = sets.stations[station] %}
+ex:{{ sample_id }}
+    ex:stationName "{{ st.name }}" ;
+    ex:project "{{ PROJECT_ID }}" .
+```
+
+## Jinja2 Built-in Functions & Filters
+
+`py-sema` extends Jinja2 with semantic utilities:
+
+- `urlescape`: URL encodes strings for URI safety.
+- `uritemplate`: Evaluates RFC 6570 URI templates.
+- `curie`: Compacts a full URI into a prefix notation.
+- `xsd`: Appends an XSD datatype to a literal value.
+

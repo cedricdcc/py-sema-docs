@@ -1,0 +1,42 @@
+---
+title: "sema-aggregate"
+description: "Aggregate multiple RDF files and directories into unified graphs"
+---
+
+`sema-aggregate` collects and merges multiple RDF files from across directories using glob patterns into a single serialized RDF file.
+
+## Syntax
+
+```bash
+sema-aggregate [options]
+```
+
+## Options
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-i`, `--input-path` | `PATH` | Root input directory (default: `.`). |
+| `-g`, `--glob-pattern` | `PATTERN[:FMT]` | Glob pattern for selecting files relative to `--input-path`. Can optionally append format explicitly (e.g. `**/*.jsonld:json-ld`). Can be repeated. |
+| `-o`, `--output-path` | `FILE` | Destination file for aggregated triples. |
+| `-fmt`, `--output-format` | `FORMAT` | RDF serialization format (e.g. `text/turtle`, `application/ld+json`). Inferred from file extension if omitted. |
+| `-l`, `--logconf` | `FILE` | Custom logging configuration. |
+
+## Examples
+
+### Merge all Turtle files in a directory tree
+
+```bash
+sema-aggregate -i ./harvested_data -g "**/*.ttl" -o ./all_data.ttl
+```
+
+### Combine mixed formats with explicit format hints
+
+```bash
+sema-aggregate \
+  -i ./raw_inputs \
+  -g "turtle_folder/**/*.ttl:turtle" \
+  -g "json_folder/**/*.jsonld:json-ld" \
+  -o ./unified.nt \
+  -fmt nt
+```
+

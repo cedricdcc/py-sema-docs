@@ -1,0 +1,71 @@
+---
+title: "sema-reason"
+description: "SPARQL CONSTRUCT reasoning and semantic graph inference"
+---
+
+`sema-reason` applies SPARQL `CONSTRUCT` queries as inference rules over RDF sources and outputs the enriched knowledge graph. It allows you to materialize implicit relationships, enrich vocabularies, and transform schemas without standing up an external reasoner.
+
+## Syntax
+
+```bash
+sema-reason [options]
+```
+
+## Options
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-s`, `--source` | `PATH\|GLOB` | Source RDF file, directory, or glob pattern. Can be specified multiple times. |
+| `-q`, `--query` | `FILE\|QUERY` | SPARQL `CONSTRUCT` query string, `.sparql` / `.rq` file, or directory. Can be specified multiple times. |
+| `-i`, `--input-path` | `PATH` | Base directory for resolving relative paths (default: `.`). |
+| `-o`, `--output-path` | `FILE` | Destination file for the reasoned graph. |
+| `-fmt`, `--output-format` | `FORMAT` | Output RDF format (default: `text/turtle`). |
+| `-l`, `--logconf` | `FILE` | Custom logging configuration. |
+
+## How It Works
+
+1. **Load Sources**: All specified files or globs in `--source` are parsed into an in-memory RDFLib graph.
+2. **Execute Queries**: Each SPARQL `CONSTRUCT` query supplied via `-q` is evaluated against the graph.
+3. **Graph Union**: New triples returned by the construct clauses are merged into the target graph.
+4. **Serialization**: The resulting graph is serialized into the requested format (Turtle, JSON-LD, etc.).
+
+## Examples
+
+### Inferring Subclass Relationships
+
+Create an inference rule `rules/subclass.sparql`:
+
+```sparql
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+CONSTRUCT {
+  ?item a ?supertype .
+}
+WHERE {
+  ?item a ?subtype .
+  ?subtype rdfs:subClassOf ?supertype .
+}
+```
+
+Run `sema-reason`:
+
+```bash
+sema-reason \
+  -s "data/*.ttl" \
+  -s "ontologies/schema.ttl" \
+  -q rules/subclass.sparql \
+  -o output/reasoned.ttl \
+  -fmt text/turtle
+```
+
+### Inline SPARQL Construct
+
+You can also pass inline queries directly on the command line:
+
+```bash
+sema-reason \
+  -s data/people.ttl \
+  -q "PREFIX schema: <https://schema.org/> CONSTRUCT { ?p schema:knows ?other } WHERE { ?p schema:worksFor ?org . ?other schema:worksFor ?org . FILTER (?p != ?other) }" \
+  -o output/connections.ttl
+```
+

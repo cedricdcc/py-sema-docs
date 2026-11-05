@@ -1,0 +1,71 @@
+---
+title: "sema-get"
+description: "Semantic web discovery, dereferencing, and LOD harvesting"
+---
+
+`sema-get` (formerly `webdiscovery`) dereferences a subject URI on the web, performs HTTP content negotiation for semantic formats, inspects HTML for embedded JSON-LD or `<link rel="alternate">` tags, and outputs or stores the accumulated RDF graph.
+
+## Syntax
+
+```bash
+sema-get <URL> [options]
+# or
+sema-get -u <URL> [options]
+```
+
+## Options
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `url` or `-u`, `--url` | `URL` | **Required**. Subject URI to discover. Must begin with `http://`, `https://`, or `file://`. |
+| `-m`, `--request-mimes` | `MIMES` | Comma-separated list or repeated flags of requested MIME types (e.g. `text/turtle`, `application/ld+json`). |
+| `-o`, `--output` | `FILE` | Destination file path for serialized triples. Use `-` for stdout. |
+| `-f`, `--format` | `FORMAT` | Output RDF format (e.g. `turtle`, `json-ld`, `xml`, `nt`). |
+| `-r`, `--read-uri` | `URI` | SPARQL endpoint read URI. |
+| `-w`, `--write-uri` | `URI` | SPARQL endpoint write URI. |
+| `-g`, `--graph` | `URI` | Target named graph in the triple store. |
+| `-z`, `--accept-zero` | - | Return success status (exit code 0) even if zero triples are recovered. |
+| `-t`, `--trace` | `PATH` | Save discovery trace and provenance records to a file. |
+| `-l`, `--logconf` | `FILE` | Custom YAML logging configuration. |
+
+## Discovery Mechanism
+
+When resolving a URL, `sema-get` employs a multi-tier dereferencing strategy:
+
+<Steps>
+  <Step title="Content Negotiation">
+    Issues HTTP `GET` requests with `Accept` headers for RDF MIME types (`text/turtle`, `application/ld+json`, `application/rdf+xml`).
+  </Step>
+  <Step title="HTML Alternate Link Discovery">
+    If an HTML document is returned, it scans `<head>` for `<link rel="alternate" type="..." href="...">` referencing RDF representations and fetches them.
+  </Step>
+  <Step title="Embedded JSON-LD Extraction">
+    Extracts structured `<script type="application/ld+json">` blocks contained within HTML landing pages.
+  </Step>
+  <Step title="Accumulation & Output">
+    Parsed graphs are accumulated, serialized to the requested output format, or inserted into the target triplestore.
+  </Step>
+</Steps>
+
+## Examples
+
+Dereference an eMoBON observatory URI and output JSON-LD to stdout:
+
+```bash
+sema-get https://data.emobon.embrc.eu/ -f json-ld -o -
+```
+
+Request Turtle specifically and save to a local file:
+
+```bash
+sema-get -u https://marineregions.org/mrgid/2540 -m text/turtle -f turtle -o mrgid-2540.ttl
+```
+
+Directly populate a remote SPARQL named graph:
+
+```bash
+sema-get https://marineregions.org/mrgid/2540 \
+  -w "http://localhost:8890/sparql-auth" \
+  -g "urn:marineregions:cache"
+```
+

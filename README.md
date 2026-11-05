@@ -1,55 +1,36 @@
-# Mintlify Starter Kit
+# py-sema Documentation
 
-Use the starter kit to get your docs deployed and ready to customize.
-
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
-
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
-
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
-
-## AI-assisted writing
-
-Set up your AI coding tool to work with Mintlify:
-
-```bash
-npx skills add https://mintlify.com/docs
-```
-
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
-
-See the guides for [Claude Code](https://www.mintlify.com/docs/guides/claude-code), [Codex](https://www.mintlify.com/docs/guides/codex), [Cursor](https://www.mintlify.com/docs/guides/cursor), and [Devin Desktop](https://www.mintlify.com/docs/guides/devin-desktop) for tool-specific setup.
+Documentation site for [py-sema](https://github.com/vliz-be-opsci/py-sema) built with [Mintlify](https://mintlify.com).
 
 ## Development
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
+Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview documentation changes locally:
 
-```
+```bash
 npm i -g mint
 ```
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+Run the development server at the root of this folder:
 
-```
+```bash
 mint dev
 ```
 
-View your local preview at `http://localhost:3000`.
+The preview will be available at `http://localhost:3000`.
 
-## Publishing changes
+## Validation
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+Validate documentation syntax, MDX content, and configuration:
 
-## Need help?
+```bash
+mint validate
+```
 
-### Troubleshooting
+## Structure
 
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
-
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+- `docs.json`: Mintlify configuration (theme, navigation, branding)
+- `index.mdx`: Project introduction and capability overview
+- `quickstart.mdx`: Installation and getting started walkthrough
+- `cli/`: Reference pages for core command-line tools (`sema-bench`, `sema-harvest`, `sema-subyt`, `sema-query`, `sema-get`, `sema-syncfs`)
+- `utilities/`: Specialized tools (`ro-crate`, `reason`, `aggregation`, `conneg`)
+- `python-api/`: Python programmatic usage, commons, and architecture/migration guide

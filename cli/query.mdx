@@ -1,0 +1,81 @@
+---
+title: "sema-query"
+description: "Extract tabular data from knowledge graphs using SPARQL templates"
+---
+
+`sema-query` (formerly `kg2tbl`) queries knowledge graphs and RDF files using templated SPARQL queries and exports the results as tabular data (CSV or TSV).
+
+It pairs with `sema-query-templates`, a helper command that installs bundled SPARQL templates into your local directory.
+
+## Syntax
+
+```bash
+sema-query -s <source...> -t <template-name> -o <output> [options]
+```
+
+## Options
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-s`, `--source` | `FILE\|URL...` | **Required**. One or more RDF files, SPARQL endpoint URLs, or downloadable dumps. |
+| `-t`, `--template_name` | `NAME` | **Required**. Name of the SPARQL template file. |
+| `-o`, `--output_location` | `FILE` | **Required**. File path for the resulting table. |
+| `-tf`, `--template_folder` | `PATH` | Path to folder containing SPARQL templates. Defaults to bundled templates. |
+| `-f`, `--output_format` | `csv\|tsv` | Output tabular format (`csv` default, or `tsv`). |
+| `-v`, `--variables` | `VARS...` | Variable substitutions passed into the SPARQL template (`key=value`, `list[]=1,2`, `dict.a=b`). |
+| `-l`, `--logconf` | `FILE` | Custom logging configuration. |
+
+## Bundled SPARQL Templates
+
+`py-sema` includes pre-packaged templates for standard semantic graph inspection:
+
+- `all.sparql`: Select all subject, predicate, object triples.
+- `rdf-types.sparql`: Count instances per `rdf:type`.
+- `rdf-predicates.sparql`: Distinct predicates used across the dataset.
+- `rdf-predicates-count.sparql`: Triple count per predicate.
+- `skos-collection.sparql`: List concepts in a SKOS collection.
+- `skos-broader-depth.sparql`: Measure hierarchy depth for SKOS concept schemes.
+
+To extract the bundled templates into a local directory:
+
+```bash
+sema-query-templates -o ./sparql_templates
+```
+
+## Parameterized Queries
+
+SPARQL templates can contain Jinja2 placeholders:
+
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?item ?label
+WHERE {
+  ?item a <{{ target_type }}> ;
+        rdfs:label ?label .
+}
+```
+
+Inject parameters via `-v`:
+
+```bash
+sema-query \
+  -s graph.ttl \
+  -t filter_by_type.sparql \
+  -v target_type=https://schema.org/Person \
+  -o people.csv
+```
+
+## Querying Remote SPARQL Endpoints
+
+`sema-query` accepts SPARQL endpoint URLs directly as `--source`:
+
+```bash
+sema-query \
+  -s "https://dbpedia.org/sparql" \
+  -t all.sparql \
+  -o dbpedia_sample.csv \
+  -f csv
+```
+

@@ -1,0 +1,45 @@
+---
+title: "sema-syncfs"
+description: "Synchronize local filesystem RDF triples with a triplestore"
+---
+
+`sema-syncfs` (formerly `syncfstriples`) synchronizes a folder hierarchy containing RDF files with a triple store SPARQL endpoint. It maps individual files to distinct named graphs, maintains an administrative provenance graph with hashes and timestamps, and only updates graphs when local files have changed.
+
+## Syntax
+
+```bash
+sema-syncfs -r <root-folder> [options]
+```
+
+## Options
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-r`, `--root` | `ROOT_FOLDER` | **Required**. Path to the directory containing RDF files to synchronize. |
+| `-b`, `--base` | `BASE_URN` | URI prefix for generated named graphs (default: `urn:sync:fs:`). |
+| `-s`, `--store` | `READ_URI [WRITE_URI]` | SPARQL endpoint read and write URLs. |
+| `-l`, `--logconf` | `FILE` | Custom logging configuration. |
+
+## How Sync Works
+
+`sema-syncfs` preserves a lightweight state in the triplestore:
+
+1. **File Scanning**: Recursively scans the `--root` folder for supported RDF files (`.ttl`, `.jsonld`, `.nt`, `.rdf`, etc.).
+2. **Graph Naming**: Converts the relative file path into a unique named graph URI by appending the path to `--base` (e.g. `urn:sync:fs:subfolder/dataset.ttl`).
+3. **Change Detection**: An admin graph records file modification times and SHA-256 content hashes.
+4. **Differential Updates**:
+   - New files: Parsed and loaded into their respective named graphs.
+   - Modified files: Cleared and re-inserted.
+   - Deleted files: Corresponding named graphs are dropped from the triplestore.
+
+## Example
+
+Synchronize an output directory of Turtle files with a local Virtuoso, GraphDB, or Fuseki SPARQL endpoint:
+
+```bash
+sema-syncfs \
+  --root ./data/rdf_files \
+  --base "urn:my-institute:datasets:" \
+  --store "http://localhost:8890/sparql" "http://localhost:8890/sparql-auth"
+```
+

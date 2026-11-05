@@ -1,0 +1,88 @@
+---
+title: "sema-harvest"
+description: "Semantic graph harvesting and path traversal service"
+---
+
+`sema-harvest` (formerly `travharv`) crawls and harvests RDF graphs across the web or local stores. Given seed subjects (specified as literal URIs or SPARQL queries), it traverses semantic property paths, dereferences resources, and accumulates the resulting knowledge graph.
+
+## Syntax
+
+```bash
+sema-harvest [options]
+```
+
+## Options
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-c`, `--config` | `PATH` | Path to a configuration YAML file or folder of configs. Defaults to `./config`. |
+| `-i`, `--init` | `PATH...` | Initial context files or directories to load into the store before harvesting. |
+| `-s`, `--store` | `READ_URI WRITE_URI` | Pair of read and write URIs pointing to a SPARQL endpoint store. |
+| `-d`, `--dump` | `FILE` | Path to dump the harvested RDF graph. Use `-` to print to stdout. |
+| `-l`, `--logconf` | `FILE` | Path to YAML logging configuration. |
+
+## Configuration File Structure
+
+`sema-harvest` uses YAML configuration files defining prefix mappings and property path assertions:
+
+```yaml
+# Optional: skip harvesting if graph was updated within this timeframe
+snooze-till-graph-age-minutes: 1440
+
+prefix:
+  schema: https://schema.org/
+  mr: http://marineregions.org/ns/ontology#
+  gsp: http://www.opengis.net/ont/geosparql#
+
+assert:
+  # 1. Harvest starting from literal subject URIs
+  - subjects:
+      literal:
+        - http://marineregions.org/mrgid/2540
+        - http://marineregions.org/mrgid/63523
+    paths:
+      - "mr:hasGeometry"
+      - "mr:isPartOf / schema:geo / schema:latitude"
+
+  # 2. Harvest starting from subjects selected by a SPARQL query
+  - subjects:
+      SPARQL: >
+        SELECT ?s
+        WHERE {
+          ?s a mr:GeoObject .
+        }
+    paths:
+      - "mr:hasGeometry / gsp:asWKT"
+```
+
+## How It Works
+
+<Steps>
+  <Step title="Context Initialization">
+    If `--init` is passed, seed files or folders are parsed and inserted into the internal or remote triplestore under `urn:harvest:context`.
+  </Step>
+  <Step title="Subject Resolution">
+    Subjects are extracted either directly from the `literal` list or by running the `SPARQL` query against the store.
+  </Step>
+  <Step title="Property Path Traversal">
+    For each subject, `sema-harvest` follows the specified property paths (including multi-hop paths separated by `/`), dereferencing target URIs via HTTP content negotiation.
+  </Step>
+  <Step title="Graph Dump">
+    If `--dump` is specified, all harvested triples are serialized (supporting Turtle, JSON-LD, etc., based on file extension) to disk or stdout.
+  </Step>
+</Steps>
+
+## Example Usage
+
+Run harvesting using a local config and dump the resulting triples to Turtle:
+
+```bash
+sema-harvest -c ./config/marine_regions.yml -d ./harvested.ttl
+```
+
+Dump directly to stdout and pipe to another command:
+
+```bash
+sema-harvest -c ./config/harvest.yml -d - | grep "schema:name"
+```
+

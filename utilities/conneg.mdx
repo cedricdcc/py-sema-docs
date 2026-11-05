@@ -1,0 +1,45 @@
+---
+title: "sema-conneg"
+description: "Evaluate HTTP content negotiation features on target URIs"
+---
+
+`sema-conneg` evaluates web URIs to discover which semantic representations and profile variants are available through HTTP content negotiation (conneg). It inspects HTTP response headers (`Content-Type`, `Link`, `Content-Profile`), logs status codes, and can dump received representations.
+
+## Syntax
+
+```bash
+sema-conneg <URL> [options]
+# or
+sema-conneg -u <URL> [options]
+```
+
+## Options
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `url` or `-u`, `--url` | `URL` | The URL endpoint to evaluate. |
+| `-v`, `--request-variants` | `VARIANTS` | Comma-separated or repeated list of `MIME[;PROFILE]` combinations to test. |
+| `-o`, `--output` | `FILE` | Write evaluation summary table to file (`-` for stdout). |
+| `-f`, `--format` | `FORMAT` | Output table format (`csv` default). |
+| `-d`, `--dump` | `PATH` | Directory where all successfully obtained variant files will be saved. |
+| `-l`, `--logconf` | `FILE` | Custom logging configuration. |
+
+## Examples
+
+### Check standard semantic web formats
+
+```bash
+sema-conneg https://data.emobon.embrc.eu/ \
+  -v "text/turtle,application/ld+json,application/rdf+xml,text/html" \
+  -o conneg_results.csv
+```
+
+### Dump all negotiated representations to a local directory
+
+```bash
+sema-conneg https://marineregions.org/mrgid/2540 \
+  -v "text/turtle" \
+  -v "application/ld+json" \
+  -d ./variants_dump
+```
+

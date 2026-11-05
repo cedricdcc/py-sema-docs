@@ -1,0 +1,77 @@
+---
+title: "Commons & Utilities"
+description: "Shared foundational utilities across the py-sema ecosystem"
+---
+
+The `sema.commons` package provides shared building blocks used by all services and available for your own extensions.
+
+## CLI Framework (`sema.commons.cli`)
+
+`SemaArgsParser` subclasses standard `argparse.ArgumentParser` to inject standard logging options (`-l` / `--logconf`), format arguments as dictionaries, and automatically initialize logging configurations:
+
+```python
+from sema.commons.cli import SemaArgsParser
+
+parser = SemaArgsParser(
+    prog="my-tool",
+    description="Custom semantic processing tool",
+)
+parser.add_argument("-i", "--input", required=True)
+args = parser.parse_args()
+```
+
+Helper methods include:
+- `SemaArgsParser.args_to_dict(pairs)`: Converts repeated `-s KEY VAL` arguments into a dictionary.
+- `SemaArgsParser.args_joined(items)`: Flattens lists of values into single comma-separated strings.
+
+## File Formats & MIME Types (`sema.commons.fileformats`)
+
+Utilities for detecting, normalizing, and converting RDF file extensions and MIME types:
+
+```python
+from pathlib import Path
+from sema.commons.fileformats import format_from_filepath, to_mimetype
+
+# Infer RDFLib parser format from path extension
+fmt = format_from_filepath(Path("dataset.ttl"), fallback="turtle")
+# Returns: "turtle"
+
+# Normalize MIME type aliases
+mime = to_mimetype("jsonld")
+# Returns: "application/ld+json"
+```
+
+## Jinja2 RDF Builders (`sema.commons.j2`)
+
+Custom Jinja2 environment extensions and filters designed specifically for RDF output:
+
+```python
+from sema.commons.j2 import SyntaxBuilder
+
+builder = SyntaxBuilder(templates_folder="./templates")
+output = builder.build_syntax("my_template.ttl", item_id="123", name="Example")
+```
+
+Filters include:
+- `urlescape`: Escapes string for valid URI inclusion.
+- `uriparse`: Resolves relative URIs against a base.
+- `curie`: Expands or compresses CURIE / QName representations.
+
+## Object Graph Mapping (`sema.commons.ogm`)
+
+Provides blueprint-driven mapping between Python dictionaries, objects, and RDFLib graphs:
+
+- `GraphBlueprint`: Parses structural requirements and property mappings.
+- `ObjectGraphMapper`: Converts domain dictionaries into typed RDF nodes.
+- `TermBuilder`: Constructs URIRefs, BNodes, and typed Literals based on blueprint rules.
+
+## Logging Loader (`sema.commons.log`)
+
+Loads and configures YAML-based Python logging:
+
+```python
+from sema.commons.log import load_log_config
+
+load_log_config("path/to/logconf.yml")
+```
+

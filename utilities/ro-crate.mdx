@@ -1,0 +1,91 @@
+---
+title: "RO-Crate Tools"
+description: "Research Object Crate creation and retrieval tools"
+---
+
+`py-sema` includes first-class support for [RO-Crate](https://www.researchobject.org/ro-crate/), a lightweight, community standard format for packaging research datasets, metadata, and provenance into structured archives.
+
+Two dedicated commands handle RO-Crates:
+
+- **`sema-roc`**: Generates `ro-crate-metadata.json` from declarative YAML blueprint files.
+- **`sema-ro-get`**: Downloads and extracts remote RO-Crates from URIs or repositories.
+
+## sema-roc (RO-Crate Creator)
+
+`sema-roc` creates standard `ro-crate-metadata.json` manifests by inspecting your project files and combining them with a `roc-*.yml` blueprint specification.
+
+### Syntax
+
+```bash
+sema-roc [root] [out] [options]
+```
+
+### Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `root` | Positional | Root directory of the RO-Crate where `roc-*.yml` resides (defaults to `.`). |
+| `out` | Positional | Output metadata filename (defaults to `ro-crate-metadata.json`). |
+| `-f`, `--force` | Flag | Force overwrite existing metadata file. |
+| `-e`, `--load-os-env` | Flag | Expose OS environment variables for evaluation in `!resolve` blueprint tags. |
+| `-l`, `--logconf` | `FILE` | Custom logging configuration. |
+
+### Blueprint Syntax (`roc-me.yml`)
+
+Create a `roc-me.yml` file in your dataset folder:
+
+```yaml
+ro-crate-metadata.json:
+  $type: CreativeWork
+  conformsTo: https://w3id.org/ro/crate/1.2
+  about: ./
+
+./:
+  $type: Dataset
+  name: "Marine Biodiversity Survey 2026"
+  description: Sampling data and observations collected during the 2026 survey
+  datePublished: "2026-06-01"
+  license: http://spdx.org/licenses/CC-BY-4.0
+  doi: !resolve '"{DOI}"^^xsd:string'
+
+data/*.csv:
+  encodingFormat: text/csv
+
+https://ror.org/04dkp1p98:
+  $type: Organization
+  name: Flanders Marine Institute
+  url: '"https://www.vliz.be"^^xsd:string'
+```
+
+Generate the metadata file:
+
+```bash
+sema-roc ./my_dataset -f -e
+```
+
+---
+
+## sema-ro-get (RO-Crate Getter)
+
+`sema-ro-get` downloads an RO-Crate archive or directory from a remote URI and unpacks it into a local destination folder.
+
+### Syntax
+
+```bash
+sema-ro-get -u <URI> [options]
+```
+
+### Options
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-u`, `--uri` | `URI` | **Required**. Remote URI of the RO-Crate or zipball. |
+| `-o`, `--output-path` | `PATH` | Local directory to save or unpack the crate (default: `.`). |
+| `-f`, `--force` | - | Overwrite target files if they exist. |
+
+### Example
+
+```bash
+sema-ro-get -u https://example.org/downloads/dataset-crate.zip -o ./extracted_crate -f
+```
+

@@ -1,0 +1,148 @@
+---
+title: "Python API Overview"
+description: "Using py-sema services and data structures programmatically in Python"
+---
+
+All CLI commands in `py-sema` are thin wrappers around modular Python service classes. You can import and invoke these services directly within your Python applications.
+
+## Common Interface Pattern
+
+Every major service follows a consistent lifecycle:
+
+1. Instantiate the service class with configuration arguments.
+2. Call `.process()` to execute the task.
+3. Access outputs from returned objects or check exit status.
+
+## Core Services
+
+### Discovery (`sema.discovery.Discovery`)
+
+Resolve URIs with content negotiation and build an in-memory RDFLib graph:
+
+```python
+from sema.discovery import Discovery
+
+discovery = Discovery(
+    subject_uri="https://data.emobon.embrc.eu/",
+    request_mimes="text/turtle,application/ld+json",
+    output_file="output.ttl",
+    output_format="turtle",
+)
+
+result_graph = discovery.process()
+print(f"Discovered {len(result_graph)} triples")
+```
+
+---
+
+### Subyt (`sema.subyt.Subyt`)
+
+Generate RDF graphs from data files and Jinja2 templates:
+
+```python
+from sema.subyt import Subyt
+
+subyt = Subyt(
+    template_name="sample.ttl",
+    template_folder="./templates",
+    source="data.csv",
+    sink="output.ttl",
+    overwrite_sink=True,
+    variables={"PROJECT": "MarineBio"},
+)
+
+result = subyt.process()
+assert result.success, "Subyt processing failed"
+```
+
+---
+
+### Query (`sema.query.GraphSource` & `DefaultSparqlBuilder`)
+
+Build and execute SPARQL templates against RDF graphs:
+
+```python
+from sema.query import DefaultSparqlBuilder, GraphSource
+
+# Load SPARQL template
+builder = DefaultSparqlBuilder("./sparql_templates")
+query_str = builder.build_syntax("all.sparql")
+
+# Load graph source (local files, URLs, or SPARQL endpoints)
+source = GraphSource.build("output.ttl")
+result = source.query(query_str)
+
+# Export as CSV
+result.as_csv("results.csv", delimiter=",")
+```
+
+---
+
+### Harvest (`sema.harvest.Harvest`)
+
+Traverse and harvest property trajectories:
+
+```python
+from pathlib import Path
+from sema.harvest import Harvest
+
+harvester = Harvest(
+    config=Path("./config/harvest.yml"),
+    store_info=["http://localhost:8890/sparql", "http://localhost:8890/sparql-auth"],
+)
+harvester.process()
+```
+
+---
+
+### SyncFsTriples (`sema.syncfs.SyncFsTriples`)
+
+Synchronize a filesystem tree to a triple store:
+
+```python
+from sema.syncfs import SyncFsTriples
+
+service = SyncFsTriples(
+    root="./rdf_output",
+    base="urn:my-institute:graph:",
+    read_uri="http://localhost:8890/sparql",
+    write_uri="http://localhost:8890/sparql-auth",
+)
+service.process()
+```
+
+---
+
+### Reasoner (`sema.commons.reason.Reasoner`)
+
+Apply SPARQL CONSTRUCT reasoning rules:
+
+```python
+from sema.commons.reason import Reasoner
+
+reasoner = Reasoner(
+    sources=["data/*.ttl"],
+    queries=["rules/enrich.sparql"],
+    output_path="reasoned.ttl",
+    output_format="text/turtle",
+)
+success = reasoner.process()
+```
+
+---
+
+### Sembench (`sema.bench.Sembench`)
+
+Run full orchestration pipelines programmatically:
+
+```python
+from sema.bench import Sembench
+
+bench = Sembench(
+    locations={"home": "./config", "output": "./output"},
+    sembench_config_file_name="sembench.yaml",
+    fail_fast=True,
+)
+bench.process()
+```
+
